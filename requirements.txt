@@ -1,0 +1,3 @@
+pymycobot
+robonomics-interface
+opencv-python
