@@ -1,5 +1,5 @@
 from pymycobot.mycobot import MyCobot
-from constants import (
+from config import (
     SERIAL_PORT,
     BAUD_RATE
 )

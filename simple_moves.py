@@ -2,7 +2,7 @@ from pymycobot.mycobot import MyCobot
 from pymycobot.genre import Coord
 import time
 
-from constants import (
+from config import (
     SERIAL_PORT,
     BAUD_RATE
 )

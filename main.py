@@ -1,43 +1,79 @@
-from robonomicsinterface import Subscriber, SubEvent, Account
+from robonomicsinterface import Subscriber, SubEvent, Account, DigitalTwin
 from pymycobot.mycobot import MyCobot
+import typing as tp
 import time
 import json
 
-from constants import (
-SERIAL_PORT,
-BAUD_RATE,
-SUBSCRIBER_ADDRESS,
-GOOD_POSITION,
-BAD_POSITION,
-MOVE_SPEED
+from config import (
+    SERIAL_PORT,
+    BAUD_RATE,
+    SEED,
+    DIGITAL_TWIN_NUMBER,
+    DIGITAL_TWIN_TOPIC,
+    GOOD_POSITION,
+    BAD_POSITION,
+    MOVE_SPEED
 )
 
 
-def main():
-    # mc = MyCobot(SERIAL_PORT, BAUD_RATE)
-    account = Account()
+class MyCobot:
+    """
+    simple class to control my cobot 280jn
+    """
 
-    def callback(data_raw):
+    def __init__(self) -> None:
+        self.account = Account()
+        self.mc = MyCobot(SERIAL_PORT, BAUD_RATE)
+        self.dt = DigitalTwin(SEED)
+        self.sub_address = self.dt.get_source(DIGITAL_TWIN_NUMBER, DIGITAL_TWIN_TOPIC)
+        self.subscriber = Subscriber(
+            self.account,
+            SubEvent.NewRecord,
+            addr=self.sub_address,
+            subscription_handler=self.callback
+        )
+        # At start go to "home position"
+        self.go_home_position()
+
+    def go_home_position(self) -> None:
+        """
+        move robot to home position - all angles to 0
+        """
+        self.mc.send_angles([0, 0, 0, 0, 0, 0], MOVE_SPEED)
+
+    def callback(self, data_raw: list[tp.Union[str, dict[str, str]]]) -> None:
+        """
+        callback function for robonomics subscribers
+        :param data_raw: data from datalog
+        """
         print(data_raw)
         data = json.loads(data_raw[2])
         status = data["status"]
         if status == "success":
             print("move to good position")
-            # mc.send_coords(GOOD_POSITION, MOVE_SPEED, 1)
+            self.mc.send_coords(GOOD_POSITION, MOVE_SPEED, 1)
+            time.sleep(10)
+            self.go_home_position()
         else:
             print("move to bad position")
-            # mc.send_coords(BAD_POSITION, MOVE_SPEED, 1)
-
-    subscriber = Subscriber(account, SubEvent.NewRecord, addr=SUBSCRIBER_ADDRESS, subscription_handler=callback)
-    try:
-        while True:
-            print("in loop")
+            self.mc.send_coords(BAD_POSITION, MOVE_SPEED, 1)
             time.sleep(10)
-    except KeyboardInterrupt:
-        print('interrupted!')
+            self.go_home_position()
 
-    subscriber.cancel()
+    def run(self) -> None:
+        """
+        infinite loop
+        """
+        try:
+            while True:
+                print("in loop")
+                time.sleep(10)
+        except KeyboardInterrupt:
+            print('interrupted!')
+
+        self.subscriber.cancel()
 
 
 if __name__ == "__main__":
-    main()
+    my_cobot = MyCobot()
+    my_cobot.run()
