@@ -10,6 +10,7 @@ from config import (
     SEED,
     DIGITAL_TWIN_NUMBER,
     DIGITAL_TWIN_TOPIC,
+    DIGITAL_TWIN_COBOT_TOPIC,
     GOOD_POSITION,
     BAD_POSITION,
     MOVE_SPEED,
@@ -25,10 +26,10 @@ class Cobot280:
         self.account = Account(seed=SEED)
         self.mc = MyCobot(SERIAL_PORT, BAUD_RATE)
         self.dt = DigitalTwin(self.account)
-        self.sub_address = self.dt.get_source(DIGITAL_TWIN_NUMBER, DIGITAL_TWIN_TOPIC)
+        self.sub_address = self.dt.get_source(DIGITAL_TWIN_NUMBER, DIGITAL_TWIN_COBOT_TOPIC)
         self.subscriber = Subscriber(
             self.account,
-            SubEvent.NewRecord,
+            SubEvent.NewLaunch,
             addr=self.sub_address,
             subscription_handler=self.callback,
         )
@@ -47,18 +48,31 @@ class Cobot280:
         :param data_raw: data from datalog
         """
         print(data_raw)
-        data = json.loads(data_raw[2])
-        status = data["status"]
-        if status == "success":
-            print("move to good position")
-            self.mc.send_coords(GOOD_POSITION, MOVE_SPEED, 1)
-            time.sleep(10)
-            self.go_home_position()
-        else:
-            print("move to bad position")
-            self.mc.send_coords(BAD_POSITION, MOVE_SPEED, 1)
-            time.sleep(10)
-            self.go_home_position()
+        
+        angles = mc.get_angles()
+        print(angles)
+
+        for i in range(0, 2):
+            mc.send_angles([0, 0, 0, 0, 0, 0], 80)
+            time.sleep(0.5)
+
+            mc.send_angles([-0.61, -0.17, -0.17, 0.79, 144.4, -48.86 ], 80)
+            time.sleep(0.5)
+
+            mc.send_angles([ -0.61, 27.77, -0.08, 1.49, 129.11, -46.31 ], 80)
+            time.sleep(0.5)
+
+            mc.send_angles([ -0.26, 27.94, 47.63, 1.4, 110.39, -46.23], 80)
+            time.sleep(0.5)
+
+            mc.send_angles([-0.61, -51.06, 21.53, -0.79, 91.23, -46.58], 80)
+            time.sleep(0.5)
+
+            mc.send_angles([ -0.61, -72.5, -12.12, -1.49, 106.69, -46.58], 80)
+            time.sleep(0.5)
+
+        mc.send_angles([0, 0, 0, 0, 0, 0], 80)
+        time.sleep(0.5)
 
     def run(self) -> None:
         """
